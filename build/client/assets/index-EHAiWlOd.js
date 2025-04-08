@@ -1,0 +1,1 @@
+import{c as t}from"./create-DC3FBBky.js";const a={user:{}},e=t({name:"user",initialState:a,reducers:{setUserData:(s,r)=>{s.user=r.payload}}}),{setUserData:o}=e.actions,i=e.reducer;export{o as s,i as u};

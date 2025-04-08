@@ -1,0 +1,29 @@
+a{
+    text-decoration: none !important;
+    color: '#393939';
+}
+.Polaris-Icon--toneSuccess svg{
+    width: 20px;
+}
+
+.style-pin-text-tool-container{
+    display: none;
+}
+
+.Polaris-Select__Content{
+    height: 32px !important;
+}
+
+.dash-action-icon-edit ,.dash-action-icon-delete{
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+}
+
+.dash-action-icon-edit:hover svg{
+    color: #9f9f9f;
+  
+}
+.dash-action-icon-delete:hover svg{
+    color: rgb(213 63 63);
+}

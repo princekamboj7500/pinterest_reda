@@ -1,0 +1,6 @@
+node_modules
+extensions
+pinterest-pin-main.zip
+.env
+.env.production
+.env.pinterest-dev

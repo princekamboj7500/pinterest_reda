@@ -1,0 +1,1 @@
+import{j as r}from"./jsx-runtime-BLI8ZJsa.js";import{C as t}from"./Templates-D6FWNYc6.js";import"./index-CP26dfb2.js";import"./Page-CP5RaZ3z.js";import"./context-CVOPGIzy.js";import"./styleData-C385Sftb.js";import"./client-CA4kW8a5.js";import"./create-DC3FBBky.js";function f(){return r.jsx(t,{})}export{f as default};

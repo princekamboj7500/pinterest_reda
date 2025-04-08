@@ -1,0 +1,56 @@
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+datasource db {
+  provider = "postgresql"
+  url      =  env("DATABASE_URL")
+}
+
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+
+model PinterestUser {
+  id                String   @id @default(uuid()) // unique ID for each Pinterest user
+  shopifyShopId     String   // Reference to the Shopify store ID
+  pinterestUserId   String   // Unique Pinterest user ID
+  accessToken       String   // Access token to interact with the Pinterest API
+  refreshToken      String?  // Optional refresh token if needed
+  userName          String   // Pinterest user name
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+
+model PinterestProductPins {
+  id                String   @id @default(uuid()) // unique ID for each Pinterest user
+  shopifyShopId     String
+  product_id        String  
+  product_title     String   @default("")
+  pinterestJson     String
+  productEditJson   String   @default("")
+  status            String   @default("")
+  QueJobId          String   @default("")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
