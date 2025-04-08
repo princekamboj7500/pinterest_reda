@@ -231,19 +231,17 @@ export default function Index({ children }) {
               </div>
               <div style={{ marginTop: "30px" }}>
                 {console.log("envFetcher", envFetcher)}
-                <span
+                <Link
                   style={{ ...styles.theme_button }}
                   to={`https://www.pinterest.com/oauth/?client_id=${envFetcher?.data?.pinterest_app_id}&redirect_uri=${envFetcher?.data?.application_url}/connect&state=${shopConfig?.shop}&response_type=code&scope=boards:read,boards:write,pins:read,pins:write,pins:read_secret,pins:write_secret,user_accounts:read`}
                   rel="noopener noreferrer"
                   target="_parent"
-                  onClick={() => {
-                    navigate(
-                      `https://www.pinterest.com/oauth/?client_id=${envFetcher?.data?.pinterest_app_id}&redirect_uri=${envFetcher?.data?.application_url}/connect&state=${shopConfig?.shop}&response_type=code&scope=boards:read,boards:write,pins:read,pins:write,pins:read_secret,pins:write_secret,user_accounts:read`
-                    );
-                  }}
+                  // onClick={() => {
+                  //   window.location = `https://www.pinterest.com/oauth/?client_id=${envFetcher?.data?.pinterest_app_id}&redirect_uri=${envFetcher?.data?.application_url}/connect&state=${shopConfig?.shop}&response_type=code&scope=boards:read,boards:write,pins:read,pins:write,pins:read_secret,pins:write_secret,user_accounts:read`;
+                  // }}
                 >
                   Connect Pinterest Account
-                </span>
+                </Link>
                 {/* <button to="select_product"  style={{...styles.theme_button}} type="button" onClick={()=>{
                         redirect(`https://www.pinterest.com/oauth/?client_id=${envFetcher?.data?.pinterest_app_id}&redirect_uri=${envFetcher?.data?.application_url}/connect&state=${shopConfig.shop}&response_type=code&scope=boards:read,boards:write,pins:read,pins:write,pins:read_secret,pins:write_secret,user_accounts:read`);
 
