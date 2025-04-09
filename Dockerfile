@@ -1,9 +1,9 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
-Install dependencies
-RUN apt-get update && \
-    apt-get install -y python3 build-essential && \
-    ln -sf python3 /usr/bin/python
+#Install dependencies
+RUN apk add --no-cache openssl
+RUN apk add --no-cache python3 py3-pip build-base
+
 
 EXPOSE 3000
 
@@ -13,7 +13,8 @@ ENV NODE_ENV=production
 
 COPY package.json package-lock.json* ./
 
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --verbose
+
 # Remove CLI packages since we don't need them in production by default.
 # Remove this line if you want to run CLI commands in your container.
 RUN npm remove @shopify/cli

@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "31ca4aeff1df9ea848c48572a6078986"
-application_url = "https://isaac-amino-methodology-calendar.trycloudflare.com"
+application_url = "https://acquire-internal-shore-kenny.trycloudflare.com"
 embedded = true
 name = "pinterest-dev"
 handle = "pinterest-dev-1"
@@ -18,9 +18,11 @@ api_version = "2025-01"
 scopes = "read_products,write_products"
 
 [auth]
-redirect_urls = [ https://isaac-amino-methodology-calendar.trycloudflare.com/auth/callback",
-  "https://isaac-amino-methodology-calendar.trycloudflare.com/auth/shopify/callback",
-  "https://isaac-amino-methodology-calendar.trycloudflare.com/api/auth/callback]
+redirect_urls = [
+  "https://acquire-internal-shore-kenny.trycloudflare.com/auth/callback",
+  "https://acquire-internal-shore-kenny.trycloudflare.com/auth/shopify/callback",
+  "https://acquire-internal-shore-kenny.trycloudflare.com/api/auth/callback"
+]
 
 [pos]
 embedded = false
