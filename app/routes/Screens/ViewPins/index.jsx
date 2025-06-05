@@ -15,7 +15,7 @@ import {
   Thumbnail,
 } from "@shopify/polaris";
 
-import { DeleteIcon, EditIcon } from "@shopify/polaris-icons";
+import { DeleteIcon, EditIcon, ViewIcon } from "@shopify/polaris-icons";
 
 import { useSelector, useDispatch } from "react-redux";
 import styles from "../../styles";
@@ -105,6 +105,10 @@ export default function ViewPins() {
     dispatch(setData(data));
     navigate("/app/create_pin");
   };
+  const handlePreview  = (data)=>{
+    dispatch(setData(data));
+    navigate("/app/preview_and_publish");
+  }
 
   useEffect(() => {
     if (deletePinFetcher?.data?.success) {
@@ -172,6 +176,14 @@ export default function ViewPins() {
 
                 let ActionButton = (
                   <div style={{ display: "flex", gap: "7px" }}>
+                     <div
+                      className="dash-action-icon-edit"
+                      onClick={() => {
+                        handlePreview(productEditJson);
+                      }}
+                    >
+                      <Icon source={ViewIcon} tone="base" />
+                    </div>
                     <div
                       className="dash-action-icon-edit"
                       onClick={() => {

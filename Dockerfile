@@ -1,6 +1,6 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
-Install dependencies
+#Install dependencies
 RUN apt-get update && \
     apt-get install -y python3 build-essential && \
     ln -sf python3 /usr/bin/python

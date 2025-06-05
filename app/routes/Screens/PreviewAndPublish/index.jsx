@@ -513,6 +513,7 @@ export default function CreatePin() {
                           marginTop: "15px",
                           marginBottom: "20px",
                           color: "#000000",
+                          lineHeight:"35px"
                         }}
                       >
                         {new_pin_data.title}

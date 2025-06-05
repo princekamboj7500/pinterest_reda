@@ -5,8 +5,10 @@ export const action = async ({ request }) => {
     const data = await request.json();
     console.log(data, "data");
 
-    const { name, description } = data;
-    const access_token = request.headers.get("access_token");
+    const { name, description, user_token } = data;
+console.log(Object.fromEntries(request.headers), 'All headers');
+
+    const access_token = user_token || request.headers.get("access_token") ;
     console.log(access_token, "access_token");
     if (!access_token) {
       return json({ message: "Access token not found" }, { status: 401 });

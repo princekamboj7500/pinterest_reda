@@ -95,6 +95,16 @@ export default function CreatePin(props) {
   const handleChangeBoard = (value) => {
     dispatch(setData({ ...new_pin_data, board_id: value }));
   };
+ 
+  useEffect(() => {
+      if (!new_pin_data?.title && new_pin_data?.product?.node?.title) {
+          const title = new_pin_data.product.node.title;
+          const url = `https://${shopUrl}/${new_pin_data.product.node.handle}`;
+          dispatch(setData({ ...new_pin_data, title, destination_url: url }));
+      }
+  }, [dispatch, new_pin_data, shopUrl]);
+
+
   return (
     <div>
       <Page

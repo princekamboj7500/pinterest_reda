@@ -164,71 +164,151 @@ export default function Dashboard(props) {
     }
   }
 
-  useEffect(() => {
-    console.log("inside useEffect");
-    if (Object.keys(storePinFetcher?.data ?? {}).length > 0) {
-      const data = Object.values(storePinFetcher.data).map((row) => {
-        let pin = JSON.parse(row.pinterestJson);
-        let pinEdit = row.productEditJson
-          ? JSON.parse(row.productEditJson)
-          : {};
+  // useEffect(() => {
+  //   console.log("inside useEffect");
+  //   if (Object.keys(storePinFetcher?.data ?? {}).length > 0) {
+  //     const data = Object.values(storePinFetcher.data).map((row) => {
+  //       let pin = JSON.parse(row.pinterestJson);
+  //       let pinEdit = row.productEditJson
+  //         ? JSON.parse(row.productEditJson)
+  //         : {};
 
-        // Status logic
-        const status =
-          row.status === "draft" ? (
-            <Button>Draft</Button>
-          ) : row.status === "scheduled" ? (
+  //       // Status logic
+  //       const status =
+  //         row.status === "draft" ? (
+  //           <Button>Draft</Button>
+  //         ) : row.status === "scheduled" ? (
+  //           <Button variant="primary" tone="critical">
+  //             Waiting
+  //           </Button>
+  //         ) : row.status === "published" ? (
+  //           <Button variant="primary" tone="success">
+  //             Published
+  //           </Button>
+  //         ) : null;
+
+  //       // Action buttons
+  //       const ActionButton = (
+  //         <div style={{ display: "flex", gap: "7px" }}>
+  //           <div
+  //             className="dash-action-icon-edit"
+  //             onClick={() => handleEditPin(pinEdit)}
+  //           >
+  //             <Icon source={EditIcon} tone="base"></Icon>
+  //           </div>
+  //           <div
+  //             className="dash-action-icon-delete"
+  //             onClick={() => {
+  //               setDeleteItemData({ id: row.id, pin_id: pin.id });
+  //               setShowDeleteAlertModal(true);
+  //               shopify.modal.show("delete-modal");
+  //             }}
+  //           >
+  //             <Icon source={DeleteIcon} tone="base"></Icon>
+  //           </div>
+  //         </div>
+  //       );
+
+  //       // Prepare row data
+  //       return [
+  //         row.product_title,
+  //         pinEdit.title,
+  //         status,
+  //         new Date(row.createdAt).toLocaleDateString("en-GB", {
+  //           day: "2-digit",
+  //           month: "long",
+  //           year: "numeric",
+  //         }),
+  //         ActionButton,
+  //       ];
+  //     });
+
+  //     setRows(data);
+  //     setLoading(false);
+  //   } else {
+  //     setLoading(false);
+  //   }
+  // }, [storePinFetcher.data]);
+
+
+  useEffect(() => {
+    // Handle case when data is still undefined
+    if (!storePinFetcher?.data) return;
+    const isDataEmpty = Object.keys(storePinFetcher.data).length === 0;
+    if (isDataEmpty) {
+      setRows([]); // ensure table is cleared
+      setLoading(false);
+      return;
+    }
+    const data = Object.values(storePinFetcher.data).map((row) => {
+      let pin = {};
+      let pinEdit = {};
+      try {
+        pin = JSON.parse(row.pinterestJson || "{}");
+      } catch (e) {
+        console.error("Invalid pinterestJson", e);
+      }
+      try {
+        pinEdit = row.productEditJson ? JSON.parse(row.productEditJson) : {};
+      } catch (e) {
+        console.error("Invalid productEditJson", e);
+      }
+      // Status logic
+      let status = null;
+      switch (row.status) {
+        case "draft":
+          status = <Button>Draft</Button>;
+          break;
+        case "scheduled":
+          status = (
             <Button variant="primary" tone="critical">
               Waiting
             </Button>
-          ) : row.status === "published" ? (
+          );
+          break;
+        case "published":
+          status = (
             <Button variant="primary" tone="success">
               Published
             </Button>
-          ) : null;
-
-        // Action buttons
-        const ActionButton = (
-          <div style={{ display: "flex", gap: "7px" }}>
-            <div
-              className="dash-action-icon-edit"
-              onClick={() => handleEditPin(pinEdit)}
-            >
-              <Icon source={EditIcon} tone="base"></Icon>
-            </div>
-            <div
-              className="dash-action-icon-delete"
-              onClick={() => {
-                setDeleteItemData({ id: row.id, pin_id: pin.id });
-                setShowDeleteAlertModal(true);
-                shopify.modal.show("delete-modal");
-              }}
-            >
-              <Icon source={DeleteIcon} tone="base"></Icon>
-            </div>
+          );
+          break;
+      }
+      // Action buttons
+      const ActionButton = (
+        <div style={{ display: "flex", gap: "7px" }}>
+          <div
+            className="dash-action-icon-edit"
+            onClick={() => handleEditPin(pinEdit)}>
+            <Icon source={EditIcon} tone="base" />
           </div>
-        );
-
-        // Prepare row data
-        return [
-          row.product_title,
-          pinEdit.title,
-          status,
-          new Date(row.createdAt).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-          }),
-          ActionButton,
-        ];
-      });
-
-      setRows(data);
-      setLoading(false);
-    } else {
-      setLoading(false);
-    }
-  }, [storePinFetcher.data]);
+          <div
+            className="dash-action-icon-delete"
+            onClick={() => {
+              setDeleteItemData({ id: row.id, pin_id: pin.id });
+              setShowDeleteAlertModal(true);
+              shopify.modal.show("delete-modal");
+            }}>
+            <Icon source={DeleteIcon} tone="base" />
+          </div>
+        </div>
+      );
+      return [
+        row.product_title ?? "-",
+        pinEdit.title ?? "-",
+        status,
+        new Date(row.createdAt).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        }),
+        ActionButton,
+      ];
+    });
+    console.log(data, "data3123");
+    setRows(data);
+    setLoading(false);
+  }, [storePinFetcher?.data]);
 
   const [showDeleteAlertModal, setShowDeleteAlertModal] = useState(false);
 

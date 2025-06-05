@@ -46,6 +46,7 @@
     "moments": "^0.0.2",
     "node-cron": "^3.0.3",
     "pinterest-node-api": "^0.0.9",
+    "pm2": "^6.0.5",
     "prisma": "^5.11.0",
     "react": "^18.2.0",
     "react-datetime": "^3.2.0",

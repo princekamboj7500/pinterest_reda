@@ -39,7 +39,7 @@ export default function CreateBoard(props) {
     const response = await fetch("/api/pinterest/create_board", {
       method: "POST",
 
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({ name, description, user_token:user.accessToken }),
       headers: {
         "Content-Type": "application/json",
         access_token: user.accessToken,

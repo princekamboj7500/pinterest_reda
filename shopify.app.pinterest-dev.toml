@@ -1,26 +1,32 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "31ca4aeff1df9ea848c48572a6078986"
-application_url = "https://isaac-amino-methodology-calendar.trycloudflare.com"
+client_id = "74e3b44abf02f3ef67707180fd243320"
+name = "stage-pinterest"
+handle = "stage-pinterest"
+application_url = "https://getpintify.com/"
 embedded = true
-name = "pinterest-dev"
-handle = "pinterest-dev-1"
 
 [build]
-automatically_update_urls_on_dev = true
 include_config_on_deploy = true
 
 [webhooks]
-api_version = "2025-01"
+api_version = "2025-04"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_products,write_products"
+scopes = "write_products"
 
 [auth]
-redirect_urls = [ https://isaac-amino-methodology-calendar.trycloudflare.com/auth/callback",
-  "https://isaac-amino-methodology-calendar.trycloudflare.com/auth/shopify/callback",
-  "https://isaac-amino-methodology-calendar.trycloudflare.com/api/auth/callback]
+redirect_urls = [ "https://example.com/api/auth" ]
 
 [pos]
 embedded = false
+

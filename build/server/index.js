@@ -15,14 +15,14 @@ import { Redis } from "ioredis";
 import axios from "axios";
 import "flatted";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { Button, Page, Card, Spinner, DataTable, Text, Icon, DatePicker, TextField, Select, Banner, Toast, ResourceList, ResourceItem, Thumbnail, BlockStack, Form, Grid, Frame, Modal as Modal$1, EmptyState, Layout, LegacyCard, AppProvider, FormLayout } from "@shopify/polaris";
+import { Page, Card, Spinner, DataTable, Text, Button, Icon, DatePicker, TextField, Select, Banner, Toast, ResourceList, ResourceItem, Thumbnail, BlockStack, Form, Grid, Frame, Modal as Modal$1, EmptyState, Layout, LegacyCard, AppProvider, FormLayout } from "@shopify/polaris";
 import { useAppBridge, Modal, TitleBar, NavMenu } from "@shopify/app-bridge-react";
 import { useDispatch, useSelector, Provider } from "react-redux";
 import moment from "moment";
 import { createSlice, configureStore } from "@reduxjs/toolkit";
 import { ToastContainer } from "react-toastify";
 import { NumericFormat } from "react-number-format";
-import { RefreshIcon, EditIcon, DeleteIcon, ThemeTemplateIcon, TextBlockIcon, ImageIcon, ImageAddIcon, TextAlignLeftIcon, TextAlignCenterIcon, TextAlignRightIcon, TextBoldIcon, TextItalicIcon, TextUnderlineIcon, ClipboardIcon } from "@shopify/polaris-icons";
+import { RefreshIcon, EditIcon, DeleteIcon, ThemeTemplateIcon, TextBlockIcon, ImageIcon, ImageAddIcon, TextAlignLeftIcon, TextAlignCenterIcon, TextAlignRightIcon, TextBoldIcon, TextItalicIcon, TextUnderlineIcon, ViewIcon, ClipboardIcon } from "@shopify/polaris-icons";
 import * as Konva from "react-konva";
 import { Stage, Layer, Rect, Image, Transformer, Group, Circle, Text as Text$1, Star, Arrow, Line, Ellipse } from "react-konva";
 import { Html } from "react-konva-utils";
@@ -219,8 +219,9 @@ const action$m = async ({ request }) => {
   try {
     const data = await request.json();
     console.log(data, "data");
-    const { name, description } = data;
-    const access_token = request.headers.get("access_token");
+    const { name, description, user_token } = data;
+    console.log(Object.fromEntries(request.headers), "All headers");
+    const access_token = user_token || request.headers.get("access_token");
     console.log(access_token, "access_token");
     if (!access_token) {
       return json$1({ message: "Access token not found" }, { status: 401 });
@@ -474,7 +475,7 @@ const styles$6 = {
     background: "none"
   }
 };
-const route39 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route40 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: styles$6
 }, Symbol.toStringTag, { value: "Module" }));
@@ -585,52 +586,76 @@ function Dashboard(props) {
     }
   }, [deletePinFetcher.data]);
   useEffect(() => {
-    console.log("inside useEffect");
-    if (Object.keys((storePinFetcher == null ? void 0 : storePinFetcher.data) ?? {}).length > 0) {
-      const data = Object.values(storePinFetcher.data).map((row) => {
-        let pin = JSON.parse(row.pinterestJson);
-        let pinEdit = row.productEditJson ? JSON.parse(row.productEditJson) : {};
-        const status = row.status === "draft" ? /* @__PURE__ */ jsx(Button, { children: "Draft" }) : row.status === "scheduled" ? /* @__PURE__ */ jsx(Button, { variant: "primary", tone: "critical", children: "Waiting" }) : row.status === "published" ? /* @__PURE__ */ jsx(Button, { variant: "primary", tone: "success", children: "Published" }) : null;
-        const ActionButton = /* @__PURE__ */ jsxs("div", { style: { display: "flex", gap: "7px" }, children: [
-          /* @__PURE__ */ jsx(
-            "div",
-            {
-              className: "dash-action-icon-edit",
-              onClick: () => handleEditPin(pinEdit),
-              children: /* @__PURE__ */ jsx(Icon, { source: EditIcon, tone: "base" })
-            }
-          ),
-          /* @__PURE__ */ jsx(
-            "div",
-            {
-              className: "dash-action-icon-delete",
-              onClick: () => {
-                setDeleteItemData({ id: row.id, pin_id: pin.id });
-                setShowDeleteAlertModal(true);
-                shopify.modal.show("delete-modal");
-              },
-              children: /* @__PURE__ */ jsx(Icon, { source: DeleteIcon, tone: "base" })
-            }
-          )
-        ] });
-        return [
-          row.product_title,
-          pinEdit.title,
-          status,
-          new Date(row.createdAt).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "long",
-            year: "numeric"
-          }),
-          ActionButton
-        ];
-      });
-      setRows(data);
+    if (!(storePinFetcher == null ? void 0 : storePinFetcher.data)) return;
+    const isDataEmpty = Object.keys(storePinFetcher.data).length === 0;
+    if (isDataEmpty) {
+      setRows([]);
       setLoading(false);
-    } else {
-      setLoading(false);
+      return;
     }
-  }, [storePinFetcher.data]);
+    const data = Object.values(storePinFetcher.data).map((row) => {
+      let pin = {};
+      let pinEdit = {};
+      try {
+        pin = JSON.parse(row.pinterestJson || "{}");
+      } catch (e) {
+        console.error("Invalid pinterestJson", e);
+      }
+      try {
+        pinEdit = row.productEditJson ? JSON.parse(row.productEditJson) : {};
+      } catch (e) {
+        console.error("Invalid productEditJson", e);
+      }
+      let status = null;
+      switch (row.status) {
+        case "draft":
+          status = /* @__PURE__ */ jsx(Button, { children: "Draft" });
+          break;
+        case "scheduled":
+          status = /* @__PURE__ */ jsx(Button, { variant: "primary", tone: "critical", children: "Waiting" });
+          break;
+        case "published":
+          status = /* @__PURE__ */ jsx(Button, { variant: "primary", tone: "success", children: "Published" });
+          break;
+      }
+      const ActionButton = /* @__PURE__ */ jsxs("div", { style: { display: "flex", gap: "7px" }, children: [
+        /* @__PURE__ */ jsx(
+          "div",
+          {
+            className: "dash-action-icon-edit",
+            onClick: () => handleEditPin(pinEdit),
+            children: /* @__PURE__ */ jsx(Icon, { source: EditIcon, tone: "base" })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "div",
+          {
+            className: "dash-action-icon-delete",
+            onClick: () => {
+              setDeleteItemData({ id: row.id, pin_id: pin.id });
+              setShowDeleteAlertModal(true);
+              shopify.modal.show("delete-modal");
+            },
+            children: /* @__PURE__ */ jsx(Icon, { source: DeleteIcon, tone: "base" })
+          }
+        )
+      ] });
+      return [
+        row.product_title ?? "-",
+        pinEdit.title ?? "-",
+        status,
+        new Date(row.createdAt).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric"
+        }),
+        ActionButton
+      ];
+    });
+    console.log(data, "data3123");
+    setRows(data);
+    setLoading(false);
+  }, [storePinFetcher == null ? void 0 : storePinFetcher.data]);
   const [showDeleteAlertModal, setShowDeleteAlertModal] = useState(false);
   const handleCloseModal = () => {
     shopify.modal.hide("delete-modal");
@@ -743,7 +768,7 @@ function Screens() {
     /* @__PURE__ */ jsx(Dashboard, { title: "Dashboard" })
   ] });
 }
-const route37 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route36 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Screens
 }, Symbol.toStringTag, { value: "Module" }));
@@ -805,7 +830,7 @@ const AuthChecker = (props) => {
   }, [reAuthUserfetcher.data, props.user]);
   return null;
 };
-const route27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AuthChecker
 }, Symbol.toStringTag, { value: "Module" }));
@@ -983,18 +1008,12 @@ function Index$2({ children }) {
       /* @__PURE__ */ jsxs("div", { style: { marginTop: "30px" }, children: [
         console.log("envFetcher", envFetcher),
         /* @__PURE__ */ jsx(
-          "span",
+          Link,
           {
             style: { ...styles$6.theme_button },
             to: `https://www.pinterest.com/oauth/?client_id=${(_a2 = envFetcher == null ? void 0 : envFetcher.data) == null ? void 0 : _a2.pinterest_app_id}&redirect_uri=${(_b = envFetcher == null ? void 0 : envFetcher.data) == null ? void 0 : _b.application_url}/connect&state=${shopConfig == null ? void 0 : shopConfig.shop}&response_type=code&scope=boards:read,boards:write,pins:read,pins:write,pins:read_secret,pins:write_secret,user_accounts:read`,
             rel: "noopener noreferrer",
             target: "_parent",
-            onClick: () => {
-              var _a3, _b2;
-              navigate(
-                `https://www.pinterest.com/oauth/?client_id=${(_a3 = envFetcher == null ? void 0 : envFetcher.data) == null ? void 0 : _a3.pinterest_app_id}&redirect_uri=${(_b2 = envFetcher == null ? void 0 : envFetcher.data) == null ? void 0 : _b2.application_url}/connect&state=${shopConfig == null ? void 0 : shopConfig.shop}&response_type=code&scope=boards:read,boards:write,pins:read,pins:write,pins:read_secret,pins:write_secret,user_accounts:read`
-              );
-            },
             children: "Connect Pinterest Account"
           }
         )
@@ -1251,7 +1270,7 @@ function Index$2({ children }) {
     )
   ] });
 }
-const route28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$g,
   default: Index$2
@@ -1712,7 +1731,8 @@ function CreatePin$1() {
                               fontFamily: "Inter",
                               marginTop: "15px",
                               marginBottom: "20px",
-                              color: "#000000"
+                              color: "#000000",
+                              lineHeight: "35px"
                             },
                             children: new_pin_data.title
                           }
@@ -2688,7 +2708,7 @@ function CreateBoard(props) {
     }
     const response = await fetch("/api/pinterest/create_board", {
       method: "POST",
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({ name, description, user_token: user.accessToken }),
       headers: {
         "Content-Type": "application/json",
         access_token: user.accessToken
@@ -12522,7 +12542,7 @@ function CreatePin(props) {
   const user = useSelector((state) => state.user.user);
   const dispatch = useDispatch();
   const bridge = useAppBridge();
-  bridge.config.shop;
+  const shopUrl = bridge.config.shop;
   useEffect(() => {
     var _a3, _b2, _c2;
     toDataUrl(
@@ -12571,6 +12591,14 @@ function CreatePin(props) {
   const handleChangeBoard = (value) => {
     dispatch(setData({ ...new_pin_data, board_id: value }));
   };
+  useEffect(() => {
+    var _a3, _b2;
+    if (!(new_pin_data == null ? void 0 : new_pin_data.title) && ((_b2 = (_a3 = new_pin_data == null ? void 0 : new_pin_data.product) == null ? void 0 : _a3.node) == null ? void 0 : _b2.title)) {
+      const title = new_pin_data.product.node.title;
+      const url = `https://${shopUrl}/${new_pin_data.product.node.handle}`;
+      dispatch(setData({ ...new_pin_data, title, destination_url: url }));
+    }
+  }, [dispatch, new_pin_data, shopUrl]);
   return /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsx(
     Page,
     {
@@ -13475,6 +13503,10 @@ function ViewPins() {
     dispatch(setData(data));
     navigate("/app/create_pin");
   };
+  const handlePreview = (data) => {
+    dispatch(setData(data));
+    navigate("/app/preview_and_publish");
+  };
   useEffect(() => {
     var _a2;
     if ((_a2 = deletePinFetcher == null ? void 0 : deletePinFetcher.data) == null ? void 0 : _a2.success) {
@@ -13525,6 +13557,16 @@ function ViewPins() {
               const imageUrl = (productEditJson == null ? void 0 : productEditJson.edited_pin_base64) ?? (productEditJson == null ? void 0 : productEditJson.product_image_base64);
               const creationDate = pinterestJson.created_at ? new Date(pinterestJson.created_at).toLocaleDateString() : "N/A";
               let ActionButton = /* @__PURE__ */ jsxs("div", { style: { display: "flex", gap: "7px" }, children: [
+                /* @__PURE__ */ jsx(
+                  "div",
+                  {
+                    className: "dash-action-icon-edit",
+                    onClick: () => {
+                      handlePreview(productEditJson);
+                    },
+                    children: /* @__PURE__ */ jsx(Icon, { source: ViewIcon, tone: "base" })
+                  }
+                ),
                 /* @__PURE__ */ jsx(
                   "div",
                   {
@@ -13634,96 +13676,8 @@ const route25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   __proto__: null,
   action: action$5
 }, Symbol.toStringTag, { value: "Module" }));
-const route26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null
-}, Symbol.toStringTag, { value: "Module" }));
-function BoardsPage() {
-  const [boards, setBoards] = useState([]);
-  const navigate = useNavigate();
-  const user = useSelector((state) => state.user.user);
-  console.log(user, "user===>");
-  const fetchBoards = async () => {
-    try {
-      const res = await fetch("/api/pinterest/boards", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          access_key: user == null ? void 0 : user.accessToken
-        }
-      });
-      if (!res.ok) {
-        throw new Error("Error while fetching boards");
-      }
-      const data = await res.json();
-      console.log(data == null ? void 0 : data.items, "data");
-      setBoards((data == null ? void 0 : data.items) || []);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-  useEffect(() => {
-    fetchBoards();
-  }, []);
-  const items = boards;
-  const emptyStateMarkup = !items.length ? /* @__PURE__ */ jsx(
-    EmptyState,
-    {
-      heading: "No boards available",
-      action: { content: "Create a board" },
-      image: "https://cdn.shopify.com/s/files/1/2376/3301/products/emptystate-files.png",
-      children: /* @__PURE__ */ jsx("p", { children: "You can create a new Pinterest board to get started." })
-    }
-  ) : void 0;
-  return /* @__PURE__ */ jsx(
-    Page,
-    {
-      title: "Boards",
-      secondaryActions: /* @__PURE__ */ jsx(Button, { variant: "secondary", onClick: () => navigate("/app"), children: "Back" }),
-      primaryAction: /* @__PURE__ */ jsx(
-        Button,
-        {
-          variant: "primary",
-          onClick: () => {
-            console.log("navigate");
-            navigate("/app/create_board");
-          },
-          children: "New"
-        }
-      ),
-      children: /* @__PURE__ */ jsx(Layout, { children: /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(LegacyCard, { children: /* @__PURE__ */ jsx(
-        ResourceList,
-        {
-          emptyState: emptyStateMarkup,
-          items,
-          renderItem: (item) => {
-            const media = /* @__PURE__ */ jsx(Icon, { source: ClipboardIcon });
-            return /* @__PURE__ */ jsxs(
-              ResourceList.Item,
-              {
-                accessibilityLabel: `View details for ${item.name}`,
-                media,
-                children: [
-                  /* @__PURE__ */ jsx(Text, { variant: "bodyMd", fontWeight: "bold", as: "h3", children: item.name }),
-                  /* @__PURE__ */ jsx("div", { children: item.description })
-                ]
-              },
-              item.id
-            );
-          },
-          showHeader: true,
-          totalItemsCount: boards.length,
-          resourceName: { singular: "board", plural: "boards" }
-        }
-      ) }) }) })
-    }
-  );
-}
-function board() {
-  return /* @__PURE__ */ jsx(Index$2, { children: /* @__PURE__ */ jsx(BoardsPage, {}) });
-}
-const route29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: board
 }, Symbol.toStringTag, { value: "Module" }));
 const loader$5 = async ({ request }) => {
   await authenticate.admin(request);
@@ -13796,11 +13750,98 @@ function Index$1() {
   const [selected_menu, set_selected_menu] = useState("dashboard");
   return /* @__PURE__ */ jsx(Index$2, { children: /* @__PURE__ */ jsx(Dashboard, { handleRefresh }) });
 }
-const route30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$4,
   default: Index$1,
   loader: loader$5
+}, Symbol.toStringTag, { value: "Module" }));
+function BoardsPage() {
+  const [boards, setBoards] = useState([]);
+  const navigate = useNavigate();
+  const user = useSelector((state) => state.user.user);
+  console.log(user, "user===>");
+  const fetchBoards = async () => {
+    const formData = new FormData();
+    formData.append("access_key", user == null ? void 0 : user.accessToken);
+    try {
+      const res = await fetch("/api/pinterest/boards", {
+        method: "POST",
+        body: formData
+      });
+      if (!res.ok) {
+        throw new Error("Error while fetching boards");
+      }
+      const data = await res.json();
+      console.log(data == null ? void 0 : data.items, "data");
+      setBoards((data == null ? void 0 : data.items) || []);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  useEffect(() => {
+    fetchBoards();
+  }, []);
+  const items = boards;
+  const emptyStateMarkup = !items.length ? /* @__PURE__ */ jsx(
+    EmptyState,
+    {
+      heading: "No boards available",
+      action: { content: "Create a board" },
+      image: "https://cdn.shopify.com/s/files/1/2376/3301/products/emptystate-files.png",
+      children: /* @__PURE__ */ jsx("p", { children: "You can create a new Pinterest board to get started." })
+    }
+  ) : void 0;
+  return /* @__PURE__ */ jsx(
+    Page,
+    {
+      title: "Boards",
+      secondaryActions: /* @__PURE__ */ jsx(Button, { variant: "secondary", onClick: () => navigate("/app"), children: "Back" }),
+      primaryAction: /* @__PURE__ */ jsx(
+        Button,
+        {
+          variant: "primary",
+          onClick: () => {
+            console.log("navigate");
+            navigate("/app/create_board");
+          },
+          children: "New"
+        }
+      ),
+      children: /* @__PURE__ */ jsx(Layout, { children: /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(LegacyCard, { children: /* @__PURE__ */ jsx(
+        ResourceList,
+        {
+          emptyState: emptyStateMarkup,
+          items,
+          renderItem: (item) => {
+            const media = /* @__PURE__ */ jsx(Icon, { source: ClipboardIcon });
+            return /* @__PURE__ */ jsxs(
+              ResourceList.Item,
+              {
+                accessibilityLabel: `View details for ${item.name}`,
+                media,
+                children: [
+                  /* @__PURE__ */ jsx(Text, { variant: "bodyMd", fontWeight: "bold", as: "h3", children: item.name }),
+                  /* @__PURE__ */ jsx("div", { children: item.description })
+                ]
+              },
+              item.id
+            );
+          },
+          showHeader: true,
+          totalItemsCount: boards.length,
+          resourceName: { singular: "board", plural: "boards" }
+        }
+      ) }) }) })
+    }
+  );
+}
+function board() {
+  return /* @__PURE__ */ jsx(Index$2, { children: /* @__PURE__ */ jsx(BoardsPage, {}) });
+}
+const route30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: board
 }, Symbol.toStringTag, { value: "Module" }));
 const Polaris = {
   ActionMenu: {
@@ -14407,17 +14448,9 @@ function Index() {
     /* @__PURE__ */ jsx("div", { style: { textAlign: "center" }, children: "Connecting..." })
   ] }) });
 }
-const route36 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route37 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Index
-}, Symbol.toStringTag, { value: "Module" }));
-const loader$2 = async ({ request }) => {
-  await authenticate.admin(request);
-  return null;
-};
-const route38 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  loader: loader$2
 }, Symbol.toStringTag, { value: "Module" }));
 const index = "_index_12o3y_1";
 const heading = "_heading_12o3y_11";
@@ -14439,7 +14472,7 @@ const styles = {
   button,
   list
 };
-const loader$1 = async ({ request }) => {
+const loader$2 = async ({ request }) => {
   const url = new URL(request.url);
   if (url.searchParams.get("shop")) {
     throw redirect(`/app?${url.searchParams.toString()}`);
@@ -14475,9 +14508,17 @@ function App$1() {
     ] })
   ] }) });
 }
-const route40 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route38 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: App$1,
+  loader: loader$2
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$1 = async ({ request }) => {
+  await authenticate.admin(request);
+  return null;
+};
+const route39 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
   loader: loader$1
 }, Symbol.toStringTag, { value: "Module" }));
 const store = configureStore({
@@ -14518,9 +14559,9 @@ const route41 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   links,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-CMKwzKeP.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/client-CA4kW8a5.js", "/assets/components-BlTBjdub.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-C1ckoBP4.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/client-CA4kW8a5.js", "/assets/components-BlTBjdub.js"], "css": [] }, "routes/api.pinterest.create_board": { "id": "routes/api.pinterest.create_board", "parentId": "root", "path": "api/pinterest/create_board", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.create_board-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.refresh_auth": { "id": "routes/api.pinterest.refresh_auth", "parentId": "root", "path": "api/pinterest/refresh_auth", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.refresh_auth-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.schedule_pin": { "id": "routes/api.pinterest.schedule_pin", "parentId": "root", "path": "api/pinterest/schedule_pin", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.schedule_pin-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.user_account": { "id": "routes/api.pinterest.user_account", "parentId": "root", "path": "api/pinterest/user_account", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.user_account-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.create_pin": { "id": "routes/api.pinterest.create_pin", "parentId": "root", "path": "api/pinterest/create_pin", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.create_pin-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.user_check": { "id": "routes/api.pinterest.user_check", "parentId": "root", "path": "api/pinterest/user_check", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.user_check-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app.preview_and_publish": { "id": "routes/app.preview_and_publish", "parentId": "routes/app", "path": "preview_and_publish", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.preview_and_publish-B0q3xSQ7.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-CSZUhtdd.js", "/assets/index-CP26dfb2.js", "/assets/styles-D_XvpvLC.js", "/assets/create-DC3FBBky.js", "/assets/react-toastify.esm-DDqzjVhy.js", "/assets/index-CNPq0y9p.js", "/assets/moment-C5S46NFB.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/Select-Cqc2aBNG.js", "/assets/Banner-BO8VKTka.js", "/assets/Toast-uxKpnzSx.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/context-CVOPGIzy.js", "/assets/XIcon.svg-DfjWHrjT.js", "/assets/index-CQUpKOYE.js"], "css": [] }, "routes/api.generate-preview": { "id": "routes/api.generate-preview", "parentId": "root", "path": "api/generate-preview", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.generate-preview-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.boards": { "id": "routes/api.pinterest.boards", "parentId": "root", "path": "api/pinterest/boards", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.boards-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.pins.save_draft": { "id": "routes/data.pins.save_draft", "parentId": "root", "path": "data/pins/save_draft", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.pins.save_draft-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.auth": { "id": "routes/api.pinterest.auth", "parentId": "root", "path": "api/pinterest/auth", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.auth-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app.select_product": { "id": "routes/app.select_product", "parentId": "routes/app", "path": "select_product", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.select_product-C_2d2RQ5.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-CSZUhtdd.js", "/assets/index-CP26dfb2.js", "/assets/styles-D_XvpvLC.js", "/assets/create-DC3FBBky.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/ResourceList-CDHVAF4t.js", "/assets/Thumbnail-BCdXp_8z.js", "/assets/Banner-BO8VKTka.js", "/assets/index-CNPq0y9p.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/context-CVOPGIzy.js", "/assets/Select-Cqc2aBNG.js", "/assets/index-CQUpKOYE.js", "/assets/InlineGrid-C9bjlSrV.js", "/assets/Sticky-525yc6rr.js", "/assets/XIcon.svg-DfjWHrjT.js"], "css": ["/assets/app-BOWNthc6.css"] }, "routes/data.users.create": { "id": "routes/data.users.create", "parentId": "routes/data.users", "path": "create", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.users.create-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.users.delete": { "id": "routes/data.users.delete", "parentId": "routes/data.users", "path": "delete", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.users.delete-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.users.update": { "id": "routes/data.users.update", "parentId": "routes/data.users", "path": "update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.users.update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app.create_board": { "id": "routes/app.create_board", "parentId": "routes/app", "path": "create_board", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.create_board-B6m7LS4N.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-CSZUhtdd.js", "/assets/index-CP26dfb2.js", "/assets/create-DC3FBBky.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/Form-FMERqV2F.js", "/assets/index-CNPq0y9p.js", "/assets/styles-D_XvpvLC.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/components-BlTBjdub.js", "/assets/context-CVOPGIzy.js"], "css": [] }, "routes/data.pins.create": { "id": "routes/data.pins.create", "parentId": "root", "path": "data/pins/create", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.pins.create-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.pins.delete": { "id": "routes/data.pins.delete", "parentId": "root", "path": "data/pins/delete", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.pins.delete-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BZ-T44pL.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/Templates-D6FWNYc6.js", "/assets/index-CP26dfb2.js", "/assets/Page-CP5RaZ3z.js", "/assets/context-CVOPGIzy.js", "/assets/styleData-C385Sftb.js", "/assets/client-CA4kW8a5.js", "/assets/create-DC3FBBky.js"], "css": ["/assets/Templates-BAZlaYmP.css"] }, "routes/app.create_pin": { "id": "routes/app.create_pin", "parentId": "routes/app", "path": "create_pin", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.create_pin-C6oYm8Qb.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-CSZUhtdd.js", "/assets/index-CP26dfb2.js", "/assets/create-DC3FBBky.js", "/assets/react-toastify.esm-DDqzjVhy.js", "/assets/index-CNPq0y9p.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/Form-FMERqV2F.js", "/assets/Select-Cqc2aBNG.js", "/assets/styles-D_XvpvLC.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/context-CVOPGIzy.js"], "css": [] }, "routes/app.style_pin": { "id": "routes/app.style_pin", "parentId": "routes/app", "path": "style_pin", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.style_pin-BuTX319d.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-CSZUhtdd.js", "/assets/index-CP26dfb2.js", "/assets/styleData-C385Sftb.js", "/assets/styles-D_XvpvLC.js", "/assets/create-DC3FBBky.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/index-CNPq0y9p.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/components-BlTBjdub.js", "/assets/client-CA4kW8a5.js", "/assets/context-CVOPGIzy.js"], "css": [] }, "routes/app.templates": { "id": "routes/app.templates", "parentId": "routes/app", "path": "templates", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.templates-BZ-T44pL.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/Templates-D6FWNYc6.js", "/assets/index-CP26dfb2.js", "/assets/Page-CP5RaZ3z.js", "/assets/context-CVOPGIzy.js", "/assets/styleData-C385Sftb.js", "/assets/client-CA4kW8a5.js", "/assets/create-DC3FBBky.js"], "css": ["/assets/Templates-BAZlaYmP.css"] }, "routes/app.view_pins": { "id": "routes/app.view_pins", "parentId": "routes/app", "path": "view_pins", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.view_pins-D0eAtYBO.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-CSZUhtdd.js", "/assets/index-CP26dfb2.js", "/assets/create-DC3FBBky.js", "/assets/moment-C5S46NFB.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/context-CVOPGIzy.js", "/assets/Card-cfPGhfhX.js", "/assets/Toast-uxKpnzSx.js", "/assets/context-DUgBqHB1.js", "/assets/XIcon.svg-DfjWHrjT.js", "/assets/InlineGrid-C9bjlSrV.js", "/assets/DataTable-Bwh0IRBP.js", "/assets/Thumbnail-BCdXp_8z.js", "/assets/index-CNPq0y9p.js", "/assets/styles-D_XvpvLC.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/index-CQUpKOYE.js", "/assets/Sticky-525yc6rr.js"], "css": [] }, "routes/data.pins.get": { "id": "routes/data.pins.get", "parentId": "root", "path": "data/pins/get", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.pins.get-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.products": { "id": "routes/data.products", "parentId": "root", "path": "data/products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.products-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app.modules": { "id": "routes/app.modules", "parentId": "routes/app", "path": "modules", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app-BPypBdx3.css", "imports": [], "css": [] }, "routes/AuthChecker": { "id": "routes/AuthChecker", "parentId": "root", "path": "AuthChecker", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/AuthChecker-CNFSFa96.js", "imports": ["/assets/index-CP26dfb2.js", "/assets/components-BlTBjdub.js"], "css": [] }, "routes/ThemeLayout": { "id": "routes/ThemeLayout", "parentId": "root", "path": "ThemeLayout", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/ThemeLayout-CSZUhtdd.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/index-CNPq0y9p.js", "/assets/styles-D_XvpvLC.js", "/assets/create-DC3FBBky.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/context-CVOPGIzy.js"], "css": [] }, "routes/app.boards": { "id": "routes/app.boards", "parentId": "routes/app", "path": "boards", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.boards-P-HBuCLJ.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-CSZUhtdd.js", "/assets/index-CP26dfb2.js", "/assets/create-DC3FBBky.js", "/assets/Page-CP5RaZ3z.js", "/assets/InlineGrid-C9bjlSrV.js", "/assets/Card-cfPGhfhX.js", "/assets/ResourceList-CDHVAF4t.js", "/assets/index-CNPq0y9p.js", "/assets/styles-D_XvpvLC.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/components-BlTBjdub.js", "/assets/context-CVOPGIzy.js", "/assets/Select-Cqc2aBNG.js", "/assets/index-CQUpKOYE.js", "/assets/Sticky-525yc6rr.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-dztF2kiA.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/ThemeLayout-CSZUhtdd.js", "/assets/index-tgQQ76OV.js", "/assets/index-CNPq0y9p.js", "/assets/styles-D_XvpvLC.js", "/assets/create-DC3FBBky.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/context-CVOPGIzy.js", "/assets/Card-cfPGhfhX.js", "/assets/DataTable-Bwh0IRBP.js", "/assets/index-CQUpKOYE.js", "/assets/Sticky-525yc6rr.js"], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-CJWgxvOe.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/styles-D5koe_rk.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/context-CVOPGIzy.js", "/assets/context-DUgBqHB1.js"], "css": [] }, "routes/data.users": { "id": "routes/data.users", "parentId": "root", "path": "data/users", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.users-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.shop": { "id": "routes/data.shop", "parentId": "root", "path": "data/shop", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.shop-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.env": { "id": "routes/data.env", "parentId": "root", "path": "data/env", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.env-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks": { "id": "routes/webhooks", "parentId": "root", "path": "webhooks", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/connect": { "id": "routes/connect", "parentId": "root", "path": "connect", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/index-D5kG5eki.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/components-BlTBjdub.js"], "css": [] }, "routes/Screens": { "id": "routes/Screens", "parentId": "root", "path": "Screens", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/index-CVzA-BNr.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/index-tgQQ76OV.js", "/assets/index-CNPq0y9p.js", "/assets/create-DC3FBBky.js", "/assets/moment-C5S46NFB.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/context-CVOPGIzy.js", "/assets/Card-cfPGhfhX.js", "/assets/DataTable-Bwh0IRBP.js", "/assets/index-CQUpKOYE.js", "/assets/Sticky-525yc6rr.js"], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/styles": { "id": "routes/styles", "parentId": "root", "path": "styles", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/styles-D_XvpvLC.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-BGyz1XEg.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/components-BlTBjdub.js", "/assets/index-CP26dfb2.js"], "css": ["/assets/route-TqOIn4DE.css"] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-B5obxmSQ.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/components-BlTBjdub.js", "/assets/styles-D5koe_rk.js", "/assets/index-CNPq0y9p.js", "/assets/create-DC3FBBky.js", "/assets/index-EHAiWlOd.js", "/assets/react-toastify.esm-DDqzjVhy.js", "/assets/context-CVOPGIzy.js", "/assets/context-DUgBqHB1.js"], "css": ["/assets/app-Bh76j7cs.css"] } }, "url": "/assets/manifest-9e1da032.js", "version": "9e1da032" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-CMKwzKeP.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/client-CA4kW8a5.js", "/assets/components-BlTBjdub.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-C1ckoBP4.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/client-CA4kW8a5.js", "/assets/components-BlTBjdub.js"], "css": [] }, "routes/api.pinterest.create_board": { "id": "routes/api.pinterest.create_board", "parentId": "root", "path": "api/pinterest/create_board", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.create_board-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.refresh_auth": { "id": "routes/api.pinterest.refresh_auth", "parentId": "root", "path": "api/pinterest/refresh_auth", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.refresh_auth-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.schedule_pin": { "id": "routes/api.pinterest.schedule_pin", "parentId": "root", "path": "api/pinterest/schedule_pin", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.schedule_pin-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.user_account": { "id": "routes/api.pinterest.user_account", "parentId": "root", "path": "api/pinterest/user_account", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.user_account-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.create_pin": { "id": "routes/api.pinterest.create_pin", "parentId": "root", "path": "api/pinterest/create_pin", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.create_pin-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.user_check": { "id": "routes/api.pinterest.user_check", "parentId": "root", "path": "api/pinterest/user_check", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.user_check-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app.preview_and_publish": { "id": "routes/app.preview_and_publish", "parentId": "routes/app", "path": "preview_and_publish", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.preview_and_publish-Ce-zIFPY.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-DZMlq_NC.js", "/assets/index-CP26dfb2.js", "/assets/styles-D_XvpvLC.js", "/assets/create-DC3FBBky.js", "/assets/react-toastify.esm-DDqzjVhy.js", "/assets/index-CNPq0y9p.js", "/assets/moment-C5S46NFB.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/Select-Cqc2aBNG.js", "/assets/Banner-BO8VKTka.js", "/assets/Toast-uxKpnzSx.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/context-CVOPGIzy.js", "/assets/XIcon.svg-DfjWHrjT.js", "/assets/index-CQUpKOYE.js"], "css": [] }, "routes/api.generate-preview": { "id": "routes/api.generate-preview", "parentId": "root", "path": "api/generate-preview", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.generate-preview-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.boards": { "id": "routes/api.pinterest.boards", "parentId": "root", "path": "api/pinterest/boards", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.boards-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.pins.save_draft": { "id": "routes/data.pins.save_draft", "parentId": "root", "path": "data/pins/save_draft", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.pins.save_draft-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.pinterest.auth": { "id": "routes/api.pinterest.auth", "parentId": "root", "path": "api/pinterest/auth", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.pinterest.auth-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app.select_product": { "id": "routes/app.select_product", "parentId": "routes/app", "path": "select_product", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.select_product-CDlnuoB6.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-DZMlq_NC.js", "/assets/index-CP26dfb2.js", "/assets/styles-D_XvpvLC.js", "/assets/create-DC3FBBky.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/ResourceList-CDHVAF4t.js", "/assets/Thumbnail-BCdXp_8z.js", "/assets/Banner-BO8VKTka.js", "/assets/index-CNPq0y9p.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/context-CVOPGIzy.js", "/assets/Select-Cqc2aBNG.js", "/assets/index-CQUpKOYE.js", "/assets/InlineGrid-C9bjlSrV.js", "/assets/Sticky-525yc6rr.js", "/assets/XIcon.svg-DfjWHrjT.js"], "css": ["/assets/app-BOWNthc6.css"] }, "routes/data.users.create": { "id": "routes/data.users.create", "parentId": "routes/data.users", "path": "create", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.users.create-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.users.delete": { "id": "routes/data.users.delete", "parentId": "routes/data.users", "path": "delete", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.users.delete-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.users.update": { "id": "routes/data.users.update", "parentId": "routes/data.users", "path": "update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.users.update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app.create_board": { "id": "routes/app.create_board", "parentId": "routes/app", "path": "create_board", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.create_board-EpTTJlA4.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-DZMlq_NC.js", "/assets/index-CP26dfb2.js", "/assets/create-DC3FBBky.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/Form-FMERqV2F.js", "/assets/index-CNPq0y9p.js", "/assets/styles-D_XvpvLC.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/components-BlTBjdub.js", "/assets/context-CVOPGIzy.js"], "css": [] }, "routes/data.pins.create": { "id": "routes/data.pins.create", "parentId": "root", "path": "data/pins/create", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.pins.create-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.pins.delete": { "id": "routes/data.pins.delete", "parentId": "root", "path": "data/pins/delete", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.pins.delete-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BZ-T44pL.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/Templates-D6FWNYc6.js", "/assets/index-CP26dfb2.js", "/assets/Page-CP5RaZ3z.js", "/assets/context-CVOPGIzy.js", "/assets/styleData-C385Sftb.js", "/assets/client-CA4kW8a5.js", "/assets/create-DC3FBBky.js"], "css": ["/assets/Templates-BAZlaYmP.css"] }, "routes/app.create_pin": { "id": "routes/app.create_pin", "parentId": "routes/app", "path": "create_pin", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.create_pin-BOzfg-eP.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-DZMlq_NC.js", "/assets/index-CP26dfb2.js", "/assets/create-DC3FBBky.js", "/assets/react-toastify.esm-DDqzjVhy.js", "/assets/index-CNPq0y9p.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/Form-FMERqV2F.js", "/assets/Select-Cqc2aBNG.js", "/assets/styles-D_XvpvLC.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/context-CVOPGIzy.js"], "css": [] }, "routes/app.style_pin": { "id": "routes/app.style_pin", "parentId": "routes/app", "path": "style_pin", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.style_pin-BzZiBEvx.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-DZMlq_NC.js", "/assets/index-CP26dfb2.js", "/assets/styleData-C385Sftb.js", "/assets/styles-D_XvpvLC.js", "/assets/create-DC3FBBky.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/index-CNPq0y9p.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/components-BlTBjdub.js", "/assets/client-CA4kW8a5.js", "/assets/context-CVOPGIzy.js"], "css": [] }, "routes/app.templates": { "id": "routes/app.templates", "parentId": "routes/app", "path": "templates", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.templates-BZ-T44pL.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/Templates-D6FWNYc6.js", "/assets/index-CP26dfb2.js", "/assets/Page-CP5RaZ3z.js", "/assets/context-CVOPGIzy.js", "/assets/styleData-C385Sftb.js", "/assets/client-CA4kW8a5.js", "/assets/create-DC3FBBky.js"], "css": ["/assets/Templates-BAZlaYmP.css"] }, "routes/app.view_pins": { "id": "routes/app.view_pins", "parentId": "routes/app", "path": "view_pins", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.view_pins-BGR-5JOH.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-DZMlq_NC.js", "/assets/index-CP26dfb2.js", "/assets/create-DC3FBBky.js", "/assets/moment-C5S46NFB.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/context-CVOPGIzy.js", "/assets/Card-cfPGhfhX.js", "/assets/Toast-uxKpnzSx.js", "/assets/context-DUgBqHB1.js", "/assets/XIcon.svg-DfjWHrjT.js", "/assets/InlineGrid-C9bjlSrV.js", "/assets/DataTable-Bwh0IRBP.js", "/assets/Thumbnail-BCdXp_8z.js", "/assets/index-CNPq0y9p.js", "/assets/styles-D_XvpvLC.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/index-CQUpKOYE.js", "/assets/Sticky-525yc6rr.js"], "css": [] }, "routes/data.pins.get": { "id": "routes/data.pins.get", "parentId": "root", "path": "data/pins/get", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.pins.get-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.products": { "id": "routes/data.products", "parentId": "root", "path": "data/products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.products-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/AuthChecker": { "id": "routes/AuthChecker", "parentId": "root", "path": "AuthChecker", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/AuthChecker-CNFSFa96.js", "imports": ["/assets/index-CP26dfb2.js", "/assets/components-BlTBjdub.js"], "css": [] }, "routes/ThemeLayout": { "id": "routes/ThemeLayout", "parentId": "root", "path": "ThemeLayout", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/ThemeLayout-DZMlq_NC.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/index-CNPq0y9p.js", "/assets/styles-D_XvpvLC.js", "/assets/create-DC3FBBky.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/context-CVOPGIzy.js"], "css": [] }, "routes/app.modules": { "id": "routes/app.modules", "parentId": "routes/app", "path": "modules", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app-BPypBdx3.css", "imports": [], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-DI_1HxSC.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/ThemeLayout-DZMlq_NC.js", "/assets/index-eEoRdBcD.js", "/assets/index-CNPq0y9p.js", "/assets/styles-D_XvpvLC.js", "/assets/create-DC3FBBky.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/context-CVOPGIzy.js", "/assets/Card-cfPGhfhX.js", "/assets/DataTable-Bwh0IRBP.js", "/assets/index-CQUpKOYE.js", "/assets/Sticky-525yc6rr.js"], "css": [] }, "routes/app.boards": { "id": "routes/app.boards", "parentId": "routes/app", "path": "boards", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.boards-CscaxQMK.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/ThemeLayout-DZMlq_NC.js", "/assets/index-CP26dfb2.js", "/assets/create-DC3FBBky.js", "/assets/Page-CP5RaZ3z.js", "/assets/InlineGrid-C9bjlSrV.js", "/assets/Card-cfPGhfhX.js", "/assets/ResourceList-CDHVAF4t.js", "/assets/index-CNPq0y9p.js", "/assets/styles-D_XvpvLC.js", "/assets/moment-C5S46NFB.js", "/assets/index-EHAiWlOd.js", "/assets/AuthChecker-CNFSFa96.js", "/assets/components-BlTBjdub.js", "/assets/context-CVOPGIzy.js", "/assets/Select-Cqc2aBNG.js", "/assets/index-CQUpKOYE.js", "/assets/Sticky-525yc6rr.js"], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-CJWgxvOe.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/styles-D5koe_rk.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/Card-cfPGhfhX.js", "/assets/context-CVOPGIzy.js", "/assets/context-DUgBqHB1.js"], "css": [] }, "routes/data.users": { "id": "routes/data.users", "parentId": "root", "path": "data/users", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.users-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.shop": { "id": "routes/data.shop", "parentId": "root", "path": "data/shop", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.shop-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/data.env": { "id": "routes/data.env", "parentId": "root", "path": "data/env", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/data.env-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks": { "id": "routes/webhooks", "parentId": "root", "path": "webhooks", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/Screens": { "id": "routes/Screens", "parentId": "root", "path": "Screens", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/index-D1l67hJv.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/index-eEoRdBcD.js", "/assets/index-CNPq0y9p.js", "/assets/create-DC3FBBky.js", "/assets/moment-C5S46NFB.js", "/assets/components-BlTBjdub.js", "/assets/Page-CP5RaZ3z.js", "/assets/context-CVOPGIzy.js", "/assets/Card-cfPGhfhX.js", "/assets/DataTable-Bwh0IRBP.js", "/assets/index-CQUpKOYE.js", "/assets/Sticky-525yc6rr.js"], "css": [] }, "routes/connect": { "id": "routes/connect", "parentId": "root", "path": "connect", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/index-D5kG5eki.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/components-BlTBjdub.js"], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-BGyz1XEg.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/components-BlTBjdub.js", "/assets/index-CP26dfb2.js"], "css": ["/assets/route-TqOIn4DE.css"] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/styles": { "id": "routes/styles", "parentId": "root", "path": "styles", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/styles-D_XvpvLC.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-B5obxmSQ.js", "imports": ["/assets/jsx-runtime-BLI8ZJsa.js", "/assets/index-CP26dfb2.js", "/assets/components-BlTBjdub.js", "/assets/styles-D5koe_rk.js", "/assets/index-CNPq0y9p.js", "/assets/create-DC3FBBky.js", "/assets/index-EHAiWlOd.js", "/assets/react-toastify.esm-DDqzjVhy.js", "/assets/context-CVOPGIzy.js", "/assets/context-DUgBqHB1.js"], "css": ["/assets/app-Bh76j7cs.css"] } }, "url": "/assets/manifest-ddacdbcc.js", "version": "ddacdbcc" };
 const mode = "production";
-const assetsBuildDirectory = "build\\client";
+const assetsBuildDirectory = "build/client";
 const basename = "/";
 const future = { "v3_fetcherPersist": false, "v3_relativeSplatPath": false, "v3_throwAbortReason": false, "v3_routeConfig": false, "v3_singleFetch": false, "v3_lazyRouteDiscovery": false, "unstable_optimizeDeps": false };
 const isSpaMode = false;
@@ -14735,21 +14776,13 @@ const routes = {
     caseSensitive: void 0,
     module: route25
   },
-  "routes/app.modules": {
-    id: "routes/app.modules",
-    parentId: "routes/app",
-    path: "modules",
-    index: void 0,
-    caseSensitive: void 0,
-    module: route26
-  },
   "routes/AuthChecker": {
     id: "routes/AuthChecker",
     parentId: "root",
     path: "AuthChecker",
     index: void 0,
     caseSensitive: void 0,
-    module: route27
+    module: route26
   },
   "routes/ThemeLayout": {
     id: "routes/ThemeLayout",
@@ -14757,21 +14790,29 @@ const routes = {
     path: "ThemeLayout",
     index: void 0,
     caseSensitive: void 0,
-    module: route28
+    module: route27
   },
-  "routes/app.boards": {
-    id: "routes/app.boards",
+  "routes/app.modules": {
+    id: "routes/app.modules",
     parentId: "routes/app",
-    path: "boards",
+    path: "modules",
     index: void 0,
     caseSensitive: void 0,
-    module: route29
+    module: route28
   },
   "routes/app._index": {
     id: "routes/app._index",
     parentId: "routes/app",
     path: void 0,
     index: true,
+    caseSensitive: void 0,
+    module: route29
+  },
+  "routes/app.boards": {
+    id: "routes/app.boards",
+    parentId: "routes/app",
+    path: "boards",
+    index: void 0,
     caseSensitive: void 0,
     module: route30
   },
@@ -14815,21 +14856,29 @@ const routes = {
     caseSensitive: void 0,
     module: route35
   },
-  "routes/connect": {
-    id: "routes/connect",
-    parentId: "root",
-    path: "connect",
-    index: void 0,
-    caseSensitive: void 0,
-    module: route36
-  },
   "routes/Screens": {
     id: "routes/Screens",
     parentId: "root",
     path: "Screens",
     index: void 0,
     caseSensitive: void 0,
+    module: route36
+  },
+  "routes/connect": {
+    id: "routes/connect",
+    parentId: "root",
+    path: "connect",
+    index: void 0,
+    caseSensitive: void 0,
     module: route37
+  },
+  "routes/_index": {
+    id: "routes/_index",
+    parentId: "root",
+    path: void 0,
+    index: true,
+    caseSensitive: void 0,
+    module: route38
   },
   "routes/auth.$": {
     id: "routes/auth.$",
@@ -14837,21 +14886,13 @@ const routes = {
     path: "auth/*",
     index: void 0,
     caseSensitive: void 0,
-    module: route38
+    module: route39
   },
   "routes/styles": {
     id: "routes/styles",
     parentId: "root",
     path: "styles",
     index: void 0,
-    caseSensitive: void 0,
-    module: route39
-  },
-  "routes/_index": {
-    id: "routes/_index",
-    parentId: "root",
-    path: void 0,
-    index: true,
     caseSensitive: void 0,
     module: route40
   },

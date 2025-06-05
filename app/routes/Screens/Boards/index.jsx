@@ -22,13 +22,13 @@ export default function BoardsPage() {
   console.log(user, "user===>");
   // Fetch boards from your API
   const fetchBoards = async () => {
+    const formData = new FormData()
+    formData.append("access_key", user?.accessToken);
     try {
       const res = await fetch("/api/pinterest/boards", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          access_key: user?.accessToken,
-        },
+        body: formData,
+        
       });
 
       if (!res.ok) {
